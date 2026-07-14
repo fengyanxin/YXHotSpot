@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Noto Serif SC", "Songti SC", serif;
+  --font-body: "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --color-surface: #0c0c0f;
+  --color-surface-elevated: #141418;
+  --color-surface-card: rgba(255, 255, 255, 0.04);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-muted: #8b8b96;
+  --color-accent: #ff6b4a;
+  --color-accent-soft: rgba(255, 107, 74, 0.15);
+  --color-gold: #f5c842;
+  --color-silver: #b8c5d6;
+  --color-bronze: #cd7f32;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-[var(--color-surface)] text-white antialiased;
+    font-family: var(--font-body);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 107, 74, 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(66, 133, 244, 0.08), transparent),
+      radial-gradient(ellipse 50% 30% at 0% 100%, rgba(255, 130, 0, 0.06), transparent);
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: white;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: var(--color-surface-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--color-border);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #fff 0%, #ff6b4a 50%, #ffb347 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .noise::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index: 9999;
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.5s ease-out both;
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
