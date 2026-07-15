@@ -28,7 +28,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-accent)] to-[#ffb347] text-lg font-bold text-white shadow-lg shadow-[var(--color-accent)]/20">
             热
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse-glow rounded-full bg-white" />
+            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-pulse-hot-dot rounded-full bg-[#ff3333] ring-[1.5px] ring-white/90" />
           </div>
           <div>
             <h1
