@@ -25,25 +25,39 @@ export function SourceCard({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(false);
 
-    fetch(`/api/hot/${source.id}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((json: HotListResponse) => {
-        if (!cancelled) setData(json);
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      })
-      .finally(() => {
+    async function load(attempt = 0) {
+      if (cancelled) return;
+      setLoading(true);
+      if (attempt === 0) setError(false);
+
+      try {
+        const r = await fetch(`/api/hot/${source.id}`);
+        if (!r.ok) throw new Error("fetch failed");
+        const json: HotListResponse = await r.json();
+        if (!cancelled) {
+          setData(json);
+          setError(false);
+        }
+      } catch {
+        if (cancelled) return;
+        if (attempt < 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+          return load(attempt + 1);
+        }
+        setError(true);
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    }
+
+    const timer = setTimeout(() => load(), delayMs);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [source.id]);
+  }, [source.id, delayMs]);
 
   return (
     <article
