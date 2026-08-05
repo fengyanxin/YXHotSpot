@@ -314,7 +314,7 @@ export const SOURCES: SourceConfig[] = [
   {
     id: "sina-auto",
     name: "新浪汽车",
-    subtitle: "新浪 · 汽车滚动",
+    subtitle: "新浪 · 汽车资讯",
     category: "汽车",
     color: "#E6162D",
     icon: "车",

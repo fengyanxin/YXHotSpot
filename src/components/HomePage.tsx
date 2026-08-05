@@ -123,9 +123,6 @@ export function HomePage() {
                     >
                       {cat}
                     </h4>
-                    <span className="text-xs text-[var(--color-muted)]">
-                      {sources.length} 源
-                    </span>
                     <div className="h-px flex-1 bg-white/[0.06]" />
                   </div>
                   <SourceGrid sources={sources} delayOffset={gi * 3} />
