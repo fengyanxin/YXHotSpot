@@ -66,7 +66,7 @@ function HomePageContent() {
               热门精选
             </h3>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              微博 · 抖音 · 36氪
+              华尔街见闻 · 36氪 · 澎湃新闻
             </p>
           </div>
 

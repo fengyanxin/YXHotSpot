@@ -329,7 +329,7 @@ export const SOURCES: SourceConfig[] = [
   },
 ];
 
-export const FEATURED_IDS = ["weibo", "douyin", "36kr"] as const;
+export const FEATURED_IDS = ["wallstreetcn", "36kr", "thepaper"] as const;
 
 /** 不含「全部」，按展示顺序排列 */
 export const CATEGORY_ORDER: SourceCategory[] = [

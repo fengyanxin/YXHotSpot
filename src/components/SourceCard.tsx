@@ -132,9 +132,6 @@ export function SourceCard({
 
       {hot?.updateTime && !cardLoading && (
         <footer className="border-t border-white/[0.04] px-4 py-2 text-center text-[10px] text-[var(--color-muted)]">
-          {hot.stale ? (
-            <span className="text-amber-400/90">缓存数据 · </span>
-          ) : null}
           更新于{" "}
           {new Date(hot.updateTime).toLocaleString("zh-CN", {
             hour: "2-digit",
