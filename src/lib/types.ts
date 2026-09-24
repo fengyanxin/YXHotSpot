@@ -12,6 +12,8 @@ export interface HotListResponse {
   subtitle?: string;
   updateTime?: string;
   fromCache?: boolean;
+  /** 抓取失败时返回的上次成功数据 */
+  stale?: boolean;
   data: HotItem[];
 }
 

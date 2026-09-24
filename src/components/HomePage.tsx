@@ -11,36 +11,24 @@ import {
 import { Header } from "./Header";
 import { CategoryFilter } from "./CategoryFilter";
 import { SourceCard } from "./SourceCard";
+import { HotDataProvider } from "./HotDataProvider";
 
-function SourceGrid({
-  sources,
-  delayOffset = 0,
-}: {
-  sources: typeof SOURCES;
-  delayOffset?: number;
-}) {
+function SourceGrid({ sources }: { sources: typeof SOURCES }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {sources.map((source, i) => (
-        <SourceCard
-          key={source.id}
-          source={source}
-          limit={20}
-          delayMs={(delayOffset + i) * 50}
-        />
+      {sources.map((source) => (
+        <SourceCard key={source.id} source={source} limit={20} />
       ))}
     </div>
   );
 }
 
-export function HomePage() {
+function HomePageContent() {
   const [category, setCategory] = useState<SourceCategory | "全部">("全部");
 
   const featured = getFeaturedSources();
   const filtered =
-    category === "全部"
-      ? SOURCES
-      : getSourcesByCategory(category);
+    category === "全部" ? SOURCES : getSourcesByCategory(category);
 
   const grouped = useMemo(
     () => (category === "全部" ? groupSourcesByCategory(SOURCES) : []),
@@ -83,13 +71,8 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {featured.map((source, i) => (
-              <SourceCard
-                key={source.id}
-                source={source}
-                limit={20}
-                delayMs={i * 80}
-              />
+            {featured.map((source) => (
+              <SourceCard key={source.id} source={source} limit={20} />
             ))}
           </div>
         </section>
@@ -114,7 +97,7 @@ export function HomePage() {
 
           {category === "全部" ? (
             <div className="space-y-10">
-              {grouped.map(({ category: cat, sources }, gi) => (
+              {grouped.map(({ category: cat, sources }) => (
                 <div key={cat}>
                   <div className="mb-4 flex items-center gap-3">
                     <h4
@@ -125,7 +108,7 @@ export function HomePage() {
                     </h4>
                     <div className="h-px flex-1 bg-white/[0.06]" />
                   </div>
-                  <SourceGrid sources={sources} delayOffset={gi * 3} />
+                  <SourceGrid sources={sources} />
                 </div>
               ))}
             </div>
@@ -142,5 +125,13 @@ export function HomePage() {
         </p>
       </footer>
     </>
+  );
+}
+
+export function HomePage() {
+  return (
+    <HotDataProvider>
+      <HomePageContent />
+    </HotDataProvider>
   );
 }

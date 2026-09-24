@@ -6,7 +6,8 @@
 
 - 39 个数据源，覆盖综合、新闻、社交、科技、财经、视频、社区、游戏、音乐、开发、人工智能、阅读、体育、产品、设计、汽车等分类
 - 热门精选 + 分类筛选
-- 服务端 API 代理抓取，5 分钟内存缓存
+- 服务端 API 代理抓取，三层缓存（内存 + Netlify Blobs + 构建静态兜底）
+- 首页单次批量请求，避免 39 路 Serverless 冷启动
 
 ## 数据源
 
@@ -59,6 +60,16 @@ git push -u origin main
 
 5. 点击 **Deploy site**，等待构建完成
 
+构建阶段会自动执行 `scripts/warm-cache.mjs`，将各源热榜写入 `public/hot-cache/`，作为 Netlify 冷启动兜底。
+
+#### 环境变量（推荐）
+
+| 变量 | 说明 |
+|---|---|
+| `WARM_SECRET` | 定时预热密钥；Netlify 每 4 分钟调用 `/api/hot/all?warm=1` 刷新 Blobs 缓存 |
+
+在 Netlify **Site configuration → Environment variables** 中添加 `WARM_SECRET`（随机字符串即可）。
+
 ### 3. 访问站点
 
 部署成功后，Netlify 会分配 `https://<随机名>.netlify.app`。可在 **Domain management** 中绑定自定义域名。
@@ -77,16 +88,23 @@ git push
 
 ```
 src/
-  app/              # 页面与 API 路由
-  components/       # UI 组件
+  app/
+    api/hot/all/    # 全量热榜（首页唯一入口）
+    api/hot/[source]/  # 单源刷新
+  components/
+    HotDataProvider.tsx  # 全页共享热榜数据
   lib/
+    hotCache.ts     # 三层缓存
+    fetchHot.ts     # 抓取 + 批量聚合
+    scrapers.ts     # 各平台抓取
     sources.ts      # 数据源配置
-    scrapers.ts     # 抓取逻辑
-    fetchHot.ts     # 缓存与聚合
-netlify.toml        # Netlify 构建配置
+public/hot-cache/   # 构建时生成的静态兜底（自动生成）
+netlify/functions/warm.mts  # 定时预热
+netlify.toml
 ```
 
 ## 说明
 
-- 部分数据源依赖目标站点的公开接口，偶发失败属正常情况，前端会显示「加载失败」
-- Netlify 免费版 Serverless Function 有执行时长限制；单源热榜接口通常可在限制内完成
+- 抓取失败时会依次降级：Netlify Blobs 缓存 → 构建时静态缓存；仅首次部署且无缓存时才可能空白
+- 本地快速构建可跳过预热：`npm run build:fast`
+- Netlify 免费版函数约 10s 超时；全量接口优先返回缓存，再在 8s 预算内刷新过期源

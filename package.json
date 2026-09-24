@@ -7,11 +7,15 @@
   },
   "scripts": {
     "dev": "next dev -p 5180",
-    "build": "next build",
+    "build": "node scripts/warm-cache.mjs && next build",
+    "build:fast": "next build",
     "start": "next start -p 5180",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:scrapers": "node --experimental-strip-types scripts/check-scrapers.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "^8.2.0",
+    "@netlify/functions": "^2.8.2",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

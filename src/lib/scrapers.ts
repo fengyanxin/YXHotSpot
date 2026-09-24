@@ -3,6 +3,34 @@ import type { HotItem } from "./types";
 
 export const MIN_LIST_SIZE = 10;
 
+const FETCH_TIMEOUT_MS = 12_000;
+const FETCH_RETRIES = 2;
+
+function isRetryableStatus(status: number) {
+  return status >= 500 || status === 429;
+}
+
+/** ponytail: 统一超时 + 重试，避免单源 hang 占满 Netlify 函数时长 */
+async function fetchRes(url: string, init?: RequestInit): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        signal: init?.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (res.ok || !isRetryableStatus(res.status)) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+    if (attempt < FETCH_RETRIES) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("fetch failed");
+}
+
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
@@ -17,7 +45,7 @@ const WEB_HEADERS = {
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetchRes(url, {
     ...init,
     headers: { ...JSON_HEADERS, ...init?.headers },
     cache: "no-store",
@@ -27,7 +55,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 async function fetchText(url: string, init?: RequestInit): Promise<string> {
-  const res = await fetch(url, {
+  const res = await fetchRes(url, {
     ...init,
     headers: { ...WEB_HEADERS, ...init?.headers },
     cache: "no-store",
@@ -188,7 +216,7 @@ async function fetchHelloGithubFeatured(): Promise<HotItem[]> {
 }
 
 async function fetchGbkText(url: string, init?: RequestInit): Promise<string> {
-  const res = await fetch(url, {
+  const res = await fetchRes(url, {
     ...init,
     headers: { ...WEB_HEADERS, ...init?.headers },
     cache: "no-store",
@@ -196,6 +224,29 @@ async function fetchGbkText(url: string, init?: RequestInit): Promise<string> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   return new TextDecoder("gbk").decode(buf);
+}
+
+function scrapeWallstreetcnHtml(html: string): HotItem[] {
+  const items: HotItem[] = [];
+  const seen = new Set<string>();
+  const re =
+    /"title":"((?:\\.|[^"\\])*)","uri":"https:\/\/wallstreetcn\.com\/articles\/(\d+)"/g;
+  for (const m of html.matchAll(re)) {
+    const id = m[2];
+    if (seen.has(id)) continue;
+    const title = m[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, " ")
+      .trim();
+    if (title.length < 6 || /Breaking News|追踪$/.test(title)) continue;
+    seen.add(id);
+    items.push({
+      id,
+      title,
+      url: `https://wallstreetcn.com/articles/${id}`,
+    });
+  }
+  return items;
 }
 
 async function fetchSinaRoll(lid: string): Promise<HotItem[]> {
@@ -938,71 +989,46 @@ export const SCRAPERS: Record<string, Scraper> = {
   },
 
   async wallstreetcn() {
+    // ponytail: api-prod 在国内常超时；首页 HTML 更稳，且需简单 Accept 避免空壳响应
+    try {
+      // ponytail: 完整 Chrome UA 会拿到 4KB 空壳页，Safari/WebKit UA 才能拿到 SSR 数据
+      const html = await fetchRes("https://wallstreetcn.com/", {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          Accept: "text/html",
+        },
+        cache: "no-store",
+      }).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      });
+      const fromHtml = scrapeWallstreetcnHtml(html);
+      if (fromHtml.length >= MIN_LIST_SIZE) return fromHtml;
+    } catch {
+      /* api fallback below */
+    }
+
     const hotUrl =
       "https://api-prod.wallstreetcn.com/apiv1/content/articles/hot?period=all";
-    const flowUrl =
-      "https://api-prod.wallstreetcn.com/apiv1/content/information-flow?channel=global-channel&accept=article&limit=30";
-
-    try {
-      const json = await fetchJson<{
-        data?: {
-          day_items?: Array<{
-            id: number;
-            title: string;
-            pageviews: number;
-            uri: string;
-          }>;
-        };
-      }>(hotUrl, { headers: { Referer: "https://wallstreetcn.com" } });
-      const items = json.data?.day_items ?? [];
-      if (items.length >= MIN_LIST_SIZE) {
-        return items.map((item) => ({
-          id: String(item.id),
-          title: item.title,
-          url: item.uri.startsWith("http")
-            ? item.uri
-            : `https://wallstreetcn.com${item.uri}`,
-          hot: item.pageviews,
-        }));
-      }
-    } catch {
-      /* fallback below */
-    }
-
-    const flow = await fetchJson<{
+    const json = await fetchJson<{
       data?: {
-        items?: Array<{
-          resource?: {
-            title?: string;
-            content_text?: string;
-            uri?: string;
-            id?: number;
-            comment_count?: number;
-            article?: { title?: string; uri?: string; id?: number };
-          };
+        day_items?: Array<{
+          id: number;
+          title: string;
+          pageviews: number;
+          uri: string;
         }>;
       };
-    }>(flowUrl, { headers: { Referer: "https://wallstreetcn.com" } });
-    const list = flow.data?.items ?? [];
-    const items: HotItem[] = [];
-    for (const [i, entry] of list.entries()) {
-      const r = entry.resource;
-      const article = r?.article;
-      const title =
-        r?.title ?? article?.title ?? r?.content_text?.replace(/<[^>]+>/g, "").slice(0, 80);
-      if (!title) continue;
-      const id = article?.id ?? r?.id ?? i;
-      const uri = article?.uri ?? r?.uri;
-      items.push({
-        id: String(id),
-        title,
-        url: uri?.startsWith("http")
-          ? uri
-          : `https://wallstreetcn.com/articles/${id}`,
-        hot: r?.comment_count,
-      });
-    }
-    return items;
+    }>(hotUrl, { headers: { Referer: "https://wallstreetcn.com" } });
+    return (json.data?.day_items ?? []).map((item) => ({
+      id: String(item.id),
+      title: item.title,
+      url: item.uri.startsWith("http")
+        ? item.uri
+        : `https://wallstreetcn.com${item.uri}`,
+      hot: item.pageviews,
+    }));
   },
 
   async ifanr() {
