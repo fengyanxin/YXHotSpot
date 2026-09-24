@@ -56,8 +56,11 @@ export async function fetchHotList(
     await writeCacheEntry(sourceId, result);
     return result;
   } catch {
-    const stale = await readStale(sourceId);
-    if (stale) return stale;
+    // ponytail: force 时不降级 stale，避免手动刷新仍显示旧数据
+    if (!opts?.force) {
+      const stale = await readStale(sourceId);
+      if (stale) return stale;
+    }
     throw new Error("获取失败");
   }
 }

@@ -32,11 +32,15 @@ export function SourceCard({
 
       try {
         const url = force
-          ? `/api/hot/${source.id}?force=1`
+          ? `/api/hot/${source.id}?force=1&_=${Date.now()}`
           : `/api/hot/${source.id}`;
-        const r = await fetch(url);
+        const r = await fetch(url, force ? { cache: "no-store" } : undefined);
         if (!r.ok) throw new Error("fetch failed");
-        setData(await r.json());
+        const json = (await r.json()) as HotListResponse;
+        if (force && (json.stale || json.fromCache)) {
+          throw new Error("stale response");
+        }
+        setData(json);
         setError(false);
       } catch {
         if (!force) setError(true);
