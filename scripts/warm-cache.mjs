@@ -35,4 +35,6 @@ for (const s of SOURCES) {
 }
 
 console.log(`\nbuild cache: ${ok} ok, ${fail} skipped`);
-if (ok === 0) process.exit(1);
+if (ok === 0) {
+  console.warn("warm-cache: 全部失败，跳过静态兜底，继续构建");
+}

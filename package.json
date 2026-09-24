@@ -7,11 +7,11 @@
   },
   "scripts": {
     "dev": "next dev -p 5180",
-    "build": "node scripts/warm-cache.mjs && next build",
+    "build": "tsx scripts/warm-cache.mjs && next build",
     "build:fast": "next build",
     "start": "next start -p 5180",
     "lint": "next lint",
-    "check:scrapers": "node --experimental-strip-types scripts/check-scrapers.mjs"
+    "check:scrapers": "tsx scripts/check-scrapers.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0",
@@ -26,6 +26,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "tailwindcss": "^4.1.8",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }
