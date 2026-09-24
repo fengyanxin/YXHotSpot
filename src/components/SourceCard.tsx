@@ -17,10 +17,11 @@ export function SourceCard({
   compact = true,
   className = "",
 }: SourceCardProps) {
-  const { data, loading, refreshSource } = useHotData();
+  const { data, loading, refreshing, refreshSource } = useHotData();
   const hot = data[source.id];
-  const cardLoading = loading && !hot;
-  const error = !loading && !hot;
+  const isRefreshing = refreshing.has(source.id);
+  const cardLoading = (loading || isRefreshing) && !hot;
+  const error = !loading && !hot && !isRefreshing;
 
   return (
     <article
@@ -54,10 +55,35 @@ export function SourceCard({
               {source.subtitle}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => refreshSource(source.id)}
+            disabled={isRefreshing}
+            aria-label={`刷新${source.name}`}
+            title="刷新热榜"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.07] text-white/65 transition hover:border-white/20 hover:bg-white/10 hover:text-white/85 disabled:cursor-wait disabled:opacity-50"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              aria-hidden
+            >
+              <path d="M21 12a9 9 0 1 1-3-6.7" />
+              <path d="M21 3v6h-6" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      <div className="h-[280px] overflow-y-auto overscroll-contain px-2 pb-3 sm:px-3">
+      <div className="relative h-[280px] overflow-y-auto overscroll-contain px-2 pb-3 sm:px-3">
+        {isRefreshing && hot && (
+          <div className="pointer-events-none absolute inset-0 z-10 bg-black/20" />
+        )}
         {cardLoading && (
           <div className="space-y-2 px-2 py-1">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -87,7 +113,7 @@ export function SourceCard({
           </div>
         )}
 
-        {hot && !cardLoading && (
+        {hot && !cardLoading && !error && (
           <div className="divide-y divide-white/[0.04]">
             {hot.data.slice(0, limit).map((item, i) => (
               <HotItemRow

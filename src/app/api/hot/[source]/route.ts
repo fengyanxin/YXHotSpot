@@ -3,7 +3,7 @@ import { fetchHotList } from "@/lib/fetchHot";
 import { getSource } from "@/lib/sources";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ source: string }> }
 ) {
   const { source } = await params;
@@ -11,12 +11,14 @@ export async function GET(
     return NextResponse.json({ error: "未知数据源" }, { status: 404 });
   }
 
+  const force = new URL(req.url).searchParams.get("force") === "1";
+
   try {
-    const data = await fetchHotList(source);
+    const data = await fetchHotList(source, { force });
     return NextResponse.json(data, {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
+      headers: force
+        ? { "Cache-Control": "no-store" }
+        : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "获取失败";

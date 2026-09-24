@@ -15,6 +15,7 @@ type HotMap = Record<string, HotListResponse>;
 interface HotDataContextValue {
   data: HotMap;
   loading: boolean;
+  refreshing: ReadonlySet<string>;
   refresh: () => Promise<void>;
   refreshSource: (sourceId: string) => Promise<void>;
 }
@@ -24,6 +25,7 @@ const HotDataContext = createContext<HotDataContextValue | null>(null);
 export function HotDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<HotMap>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState<Set<string>>(() => new Set());
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -40,13 +42,20 @@ export function HotDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSource = useCallback(async (sourceId: string) => {
+    setRefreshing((prev) => new Set(prev).add(sourceId));
     try {
-      const r = await fetch(`/api/hot/${sourceId}`);
+      const r = await fetch(`/api/hot/${sourceId}?force=1`);
       if (!r.ok) throw new Error("fetch failed");
       const json = (await r.json()) as HotListResponse;
       setData((prev) => ({ ...prev, [sourceId]: json }));
     } catch {
       /* card shows retry */
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(sourceId);
+        return next;
+      });
     }
   }, []);
 
@@ -55,8 +64,8 @@ export function HotDataProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ data, loading, refresh, refreshSource }),
-    [data, loading, refresh, refreshSource]
+    () => ({ data, loading, refreshing, refresh, refreshSource }),
+    [data, loading, refreshing, refresh, refreshSource]
   );
 
   return (
