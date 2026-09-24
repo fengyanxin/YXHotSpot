@@ -11,7 +11,6 @@ import {
 import { Header } from "./Header";
 import { CategoryFilter } from "./CategoryFilter";
 import { SourceCard } from "./SourceCard";
-import { HotDataProvider } from "./HotDataProvider";
 
 function SourceGrid({ sources }: { sources: typeof SOURCES }) {
   return (
@@ -23,7 +22,7 @@ function SourceGrid({ sources }: { sources: typeof SOURCES }) {
   );
 }
 
-function HomePageContent() {
+export function HomePage() {
   const [category, setCategory] = useState<SourceCategory | "全部">("全部");
 
   const featured = getFeaturedSources();
@@ -66,7 +65,7 @@ function HomePageContent() {
               热门精选
             </h3>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              华尔街见闻 · 36氪 · 澎湃新闻
+              华尔街见闻 · 澎湃新闻 · 36氪
             </p>
           </div>
 
@@ -125,13 +124,5 @@ function HomePageContent() {
         </p>
       </footer>
     </>
-  );
-}
-
-export function HomePage() {
-  return (
-    <HotDataProvider>
-      <HomePageContent />
-    </HotDataProvider>
   );
 }

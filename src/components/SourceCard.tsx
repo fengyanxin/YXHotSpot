@@ -1,7 +1,7 @@
 "use client";
 
-import type { SourceConfig } from "@/lib/types";
-import { useHotData } from "./HotDataProvider";
+import { useCallback, useEffect, useState } from "react";
+import type { HotListResponse, SourceConfig } from "@/lib/types";
 import { HotItemRow } from "./HotItemRow";
 
 interface SourceCardProps {
@@ -17,11 +17,43 @@ export function SourceCard({
   compact = true,
   className = "",
 }: SourceCardProps) {
-  const { data, loading, refreshing, refreshSource } = useHotData();
-  const hot = data[source.id];
-  const isRefreshing = refreshing.has(source.id);
-  const cardLoading = (loading || isRefreshing) && !hot;
-  const error = !loading && !hot && !isRefreshing;
+  const [data, setData] = useState<HotListResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(
+    async (force = false) => {
+      if (force) setRefreshing(true);
+      else {
+        setLoading(true);
+        setError(false);
+      }
+
+      try {
+        const url = force
+          ? `/api/hot/${source.id}?force=1`
+          : `/api/hot/${source.id}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("fetch failed");
+        setData(await r.json());
+        setError(false);
+      } catch {
+        if (!force) setError(true);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [source.id]
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const cardLoading = loading && !data;
+  const showError = error && !data && !refreshing;
 
   return (
     <article
@@ -57,8 +89,8 @@ export function SourceCard({
           </div>
           <button
             type="button"
-            onClick={() => refreshSource(source.id)}
-            disabled={isRefreshing}
+            onClick={() => load(true)}
+            disabled={refreshing}
             aria-label={`刷新${source.name}`}
             title="刷新热榜"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.07] text-white/65 transition hover:border-white/20 hover:bg-white/10 hover:text-white/85 disabled:cursor-wait disabled:opacity-50"
@@ -70,7 +102,7 @@ export function SourceCard({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
               aria-hidden
             >
               <path d="M21 12a9 9 0 1 1-3-6.7" />
@@ -81,7 +113,7 @@ export function SourceCard({
       </div>
 
       <div className="relative h-[280px] overflow-y-auto overscroll-contain px-2 pb-3 sm:px-3">
-        {isRefreshing && hot && (
+        {refreshing && data && (
           <div className="pointer-events-none absolute inset-0 z-10 bg-black/20" />
         )}
         {cardLoading && (
@@ -98,14 +130,14 @@ export function SourceCard({
           </div>
         )}
 
-        {error && (
+        {showError && (
           <div className="flex flex-col items-center gap-3 px-3 py-6">
             <p className="text-center text-sm text-[var(--color-muted)]">
               加载失败
             </p>
             <button
               type="button"
-              onClick={() => refreshSource(source.id)}
+              onClick={() => load(true)}
               className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/80 transition hover:border-white/20 hover:bg-white/5"
             >
               重试
@@ -113,9 +145,9 @@ export function SourceCard({
           </div>
         )}
 
-        {hot && !cardLoading && !error && (
+        {data && !cardLoading && !showError && (
           <div className="divide-y divide-white/[0.04]">
-            {hot.data.slice(0, limit).map((item, i) => (
+            {data.data.slice(0, limit).map((item, i) => (
               <HotItemRow
                 key={item.id}
                 rank={i + 1}
@@ -130,10 +162,10 @@ export function SourceCard({
         )}
       </div>
 
-      {hot?.updateTime && !cardLoading && (
+      {data?.updateTime && !cardLoading && (
         <footer className="border-t border-white/[0.04] px-4 py-2 text-center text-[10px] text-[var(--color-muted)]">
           更新于{" "}
-          {new Date(hot.updateTime).toLocaleString("zh-CN", {
+          {new Date(data.updateTime).toLocaleString("zh-CN", {
             hour: "2-digit",
             minute: "2-digit",
           })}

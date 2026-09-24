@@ -7,7 +7,7 @@
 - 39 个数据源，覆盖综合、新闻、社交、科技、财经、视频、社区、游戏、音乐、开发、人工智能、阅读、体育、产品、设计、汽车等分类
 - 热门精选 + 分类筛选
 - 服务端 API 代理抓取，三层缓存（内存 + Netlify Blobs + 构建静态兜底）
-- 首页单次批量请求，避免 39 路 Serverless 冷启动
+- 各数据源独立并行加载，互不影响
 
 ## 数据源
 
@@ -89,10 +89,9 @@ git push
 ```
 src/
   app/
-    api/hot/all/    # 全量热榜（首页唯一入口）
-    api/hot/[source]/  # 单源刷新
+    api/hot/all/    # 全量热榜（定时预热用）
+    api/hot/[source]/  # 单源接口（首页卡片独立请求）
   components/
-    HotDataProvider.tsx  # 全页共享热榜数据
   lib/
     hotCache.ts     # 三层缓存
     fetchHot.ts     # 抓取 + 批量聚合
