@@ -47,6 +47,10 @@ export async function readCacheEntry(sourceId: string): Promise<Entry | null> {
   }
 }
 
+export function clearMemory(sourceId: string) {
+  MEMORY.delete(sourceId);
+}
+
 export async function writeCacheEntry(
   sourceId: string,
   data: HotListResponse

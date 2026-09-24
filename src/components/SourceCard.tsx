@@ -21,36 +21,40 @@ export function SourceCard({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
 
-  const load = useCallback(
-    async (force = false) => {
-      if (force) setRefreshing(true);
-      else {
-        setLoading(true);
-        setError(false);
-      }
+  const load = useCallback(async (force = false) => {
+    if (force) {
+      setRefreshing(true);
+      setRefreshFailed(false);
+    } else {
+      setLoading(true);
+      setError(false);
+    }
 
-      try {
-        const url = force
-          ? `/api/hot/${source.id}?force=1&_=${Date.now()}`
-          : `/api/hot/${source.id}`;
-        const r = await fetch(url, force ? { cache: "no-store" } : undefined);
-        if (!r.ok) throw new Error("fetch failed");
-        const json = (await r.json()) as HotListResponse;
-        if (force && (json.stale || json.fromCache)) {
-          throw new Error("stale response");
-        }
-        setData(json);
-        setError(false);
-      } catch {
-        if (!force) setError(true);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+    try {
+      const r = force
+        ? await fetch(`/api/hot/${source.id}`, {
+            method: "POST",
+            cache: "no-store",
+          })
+        : await fetch(`/api/hot/${source.id}`);
+      if (!r.ok) throw new Error("fetch failed");
+      const json = (await r.json()) as HotListResponse;
+      if (force && (json.stale || json.fromCache)) {
+        throw new Error("stale response");
       }
-    },
-    [source.id]
-  );
+      setData(json);
+      setError(false);
+      setRefreshFailed(false);
+    } catch {
+      if (force) setRefreshFailed(true);
+      else setError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [source.id]);
 
   useEffect(() => {
     load();
@@ -166,13 +170,20 @@ export function SourceCard({
         )}
       </div>
 
-      {data?.updateTime && !cardLoading && (
+      {(data?.updateTime || refreshFailed) && !cardLoading && (
         <footer className="border-t border-white/[0.04] px-4 py-2 text-center text-[10px] text-[var(--color-muted)]">
-          更新于{" "}
-          {new Date(data.updateTime).toLocaleString("zh-CN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {refreshFailed ? (
+            <span className="text-red-400/90">刷新失败，请重试 · </span>
+          ) : null}
+          {data?.updateTime ? (
+            <>
+              更新于{" "}
+              {new Date(data.updateTime).toLocaleString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </>
+          ) : null}
         </footer>
       )}
     </article>

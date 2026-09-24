@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { countMissing, fetchAllHotLists } from "@/lib/fetchHot";
 import { SOURCES } from "@/lib/sources";
 

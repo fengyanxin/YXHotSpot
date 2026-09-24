@@ -2,6 +2,7 @@ import type { HotListResponse } from "./types";
 import { SOURCES, getSource } from "./sources";
 import { scrapeHotList } from "./scrapers";
 import {
+  clearMemory,
   readFresh,
   readStale,
   writeCacheEntry,
@@ -48,6 +49,8 @@ export async function fetchHotList(
   if (!opts?.force) {
     const fresh = await readFresh(sourceId);
     if (fresh) return fresh;
+  } else {
+    clearMemory(sourceId);
   }
 
   try {
