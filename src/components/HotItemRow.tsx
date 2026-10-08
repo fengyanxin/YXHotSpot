@@ -1,3 +1,5 @@
+"use client";
+
 function formatHot(hot?: string | number): string {
   if (hot == null || hot === "") return "";
   const n = typeof hot === "string" ? parseFloat(hot.replace(/[^\d.]/g, "")) : hot;
@@ -12,6 +14,14 @@ function rankStyle(rank: number): string {
   if (rank === 2) return "bg-gradient-to-br from-[var(--color-silver)] to-[#8fa3b8] text-black";
   if (rank === 3) return "bg-gradient-to-br from-[var(--color-bronze)] to-[#a0522d] text-white";
   return "bg-white/8 text-[var(--color-muted)]";
+}
+
+function externalHref(url: string): string | null {
+  const u = url.trim();
+  if (!u || u === "#") return null;
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  if (u.startsWith("//")) return `https:${u}`;
+  return u.startsWith("/") ? null : `https://${u}`;
 }
 
 interface HotItemRowProps {
@@ -32,12 +42,24 @@ export function HotItemRow({
   compact,
 }: HotItemRowProps) {
   const hotLabel = formatHot(hot);
+  const href = externalHref(url);
+
+  const openNewTab = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!href) {
+      e.preventDefault();
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <a
-      href={url}
+      href={href ?? undefined}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={openNewTab}
       className={`group flex items-start gap-3 rounded-xl px-2 py-2 transition-all hover:bg-white/[0.04] ${
         compact ? "py-1.5" : ""
       }`}
@@ -70,6 +92,7 @@ export function HotItemRow({
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden
       >
         <path
           strokeLinecap="round"
